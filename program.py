@@ -72,6 +72,9 @@ class VM:
             elif num == 14:
                 self.op_14()
                 
+            elif num == 17:
+                self.op_17()
+                
             elif num == 19:
                 self.op_19()
                 
@@ -254,7 +257,21 @@ class VM:
         
         self.pos += 3
         
+    
+    def op_17(self) -> None:
+        a = self.input[self.pos + 1]
+        if a >= 32768:
+            a = self.register[a % 32768]
         
+        b = self.pos + 2
+        # if b >= 32768:
+        #     b = self.register[b % 32768]
+        self.stack.append(b)
+        
+        self.pos = a
+        
+    
+    
     
     def op_19(self) -> None:
         self.pos += 1
