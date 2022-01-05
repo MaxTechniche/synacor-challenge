@@ -8,11 +8,10 @@ def main():
 
 class VM:
     def __init__(self) -> None:
-        self.memory = {}
+        self.memory = []
         self.register = [0] * 8
         self.stack = []
         self.pos = 0
-        self.input = []
         
     def read(self, file_path: str=None) -> bool:
         if not file_path:
@@ -38,11 +37,11 @@ class VM:
                         high = i
                 if low == None and high == None:
                     break
-                self.input.append(expand_bytes(low, high))
+                self.memory.append(expand_bytes(low, high))
 
     def run(self) -> None:
         while True:
-            num = self.input[self.pos]
+            num = self.memory[self.pos]
             
             if num == 0:
                 self.op_0()
@@ -74,6 +73,8 @@ class VM:
                 self.op_13()
             elif num == 14:
                 self.op_14()
+            elif num == 15:
+                self.op_15()
                 
             elif num == 17:
                 self.op_17()
@@ -92,15 +93,15 @@ class VM:
         sys.exit(0)
 
     def op_1(self) -> None:
-        a = self.input[self.pos + 1] % 32768
-        b = self.input[self.pos + 2]
+        a = self.memory[self.pos + 1] % 32768
+        b = self.memory[self.pos + 2]
         if b >= 32768:
             b = self.register[b % 32768]
         self.register[a] = b
         self.pos += 3
 
     def op_2(self) -> None:
-        a = self.input[self.pos + 1]
+        a = self.memory[self.pos + 1]
         if a >= 32768:
             a = self.register[a % 32768]
         
@@ -108,16 +109,16 @@ class VM:
         self.pos += 2
 
     def op_3(self) -> None:
-        a = self.input[self.pos + 1] % 32768
+        a = self.memory[self.pos + 1] % 32768
         self.register[a] = self.stack.pop()
         self.pos += 2
 
     def op_4(self) -> None:
-        a = self.input[self.pos + 1] % 32768
-        b = self.input[self.pos + 2]
+        a = self.memory[self.pos + 1] % 32768
+        b = self.memory[self.pos + 2]
         if b >= 32768:
             b = self.register[b % 32768]
-        c = self.input[self.pos + 3]
+        c = self.memory[self.pos + 3]
         if c >= 32768:
             c = self.register[c % 32768]
         
@@ -129,11 +130,11 @@ class VM:
         self.pos += 4
 
     def op_5(self) -> None:
-        a = self.input[self.pos + 1] % 32768
-        b = self.input[self.pos + 2]
+        a = self.memory[self.pos + 1] % 32768
+        b = self.memory[self.pos + 2]
         if b >= 32768:
             b = self.register[b % 32768]
-        c = self.input[self.pos + 3]
+        c = self.memory[self.pos + 3]
         if c >= 32768:
             c = self.register[c % 32768]
         
@@ -145,29 +146,29 @@ class VM:
         self.pos += 4
    
     def op_6(self) -> None:
-        a = self.input[self.pos + 1] % 32768
+        a = self.memory[self.pos + 1] % 32768
         if a >= 32768:
             a = self.register[a % 32768]
         self.pos = a
         
     def op_7(self) -> None:
         # self.pos += 1
-        # num = self.input[self.pos]
+        # num = self.memory[self.pos]
         # if num >= 32768:
         #     num %= 32768
         #     if self.register[num] != 0:
-        #         self.pos = self.input[self.pos+1]
+        #         self.pos = self.memory[self.pos+1]
         #         return
         # else:
-        #     if self.input[self.pos] != 0:
-        #         self.pos = self.input[self.pos+1]
+        #     if self.memory[self.pos] != 0:
+        #         self.pos = self.memory[self.pos+1]
         #         return
         # self.pos += 2
         
-        a = self.input[self.pos + 1]
+        a = self.memory[self.pos + 1]
         if a >= 32768:
             a = self.register[a % 32768]
-        b = self.input[self.pos + 2]
+        b = self.memory[self.pos + 2]
         if b >= 32768:
             b = self.register[b % 32768]
         
@@ -178,23 +179,23 @@ class VM:
         
     def op_8(self) -> None:
         # self.pos += 1
-        # num = self.input[self.pos]
+        # num = self.memory[self.pos]
         # if num >= 32768:
         #     num %= 32768
         #     if self.register[num] == 0:
-        #         self.pos = self.input[self.pos+1]
+        #         self.pos = self.memory[self.pos+1]
         #         return
         # else:
-        #     if self.input[self.pos] == 0:
-        #         self.pos = self.input[self.pos+1]
+        #     if self.memory[self.pos] == 0:
+        #         self.pos = self.memory[self.pos+1]
         #         return
             
         # self.pos += 2
         
-        a = self.input[self.pos + 1]
+        a = self.memory[self.pos + 1]
         if a >= 32768:
             a = self.register[a % 32768]
-        b = self.input[self.pos + 2]
+        b = self.memory[self.pos + 2]
         if b >= 32768:
             b = self.register[b % 32768]
         
@@ -204,11 +205,11 @@ class VM:
         self.pos += 3
         
     def op_9(self) -> None:
-        a = self.input[self.pos + 1] % 32768
-        b = self.input[self.pos + 2]
+        a = self.memory[self.pos + 1] % 32768
+        b = self.memory[self.pos + 2]
         if b >= 32768:
             b = self.register[b % 32768]
-        c = self.input[self.pos + 3]
+        c = self.memory[self.pos + 3]
         if c >= 32768:
             c = self.register[c % 32768]
         
@@ -217,11 +218,11 @@ class VM:
         self.pos += 4
         
     def op_10(self) -> None:
-        a = self.input[self.pos + 1] % 32768
-        b = self.input[self.pos + 2]
+        a = self.memory[self.pos + 1] % 32768
+        b = self.memory[self.pos + 2]
         if b >= 32768:
             b = self.register[b % 32768]
-        c = self.input[self.pos + 3]
+        c = self.memory[self.pos + 3]
         if c >= 32768:
             c = self.register[c % 32768]
         
@@ -230,11 +231,11 @@ class VM:
         self.pos += 4
         
     def op_11(self) -> None:
-        a = self.input[self.pos + 1] % 32768
-        b = self.input[self.pos + 2]
+        a = self.memory[self.pos + 1] % 32768
+        b = self.memory[self.pos + 2]
         if b >= 32768:
             b = self.register[b % 32768]
-        c = self.input[self.pos + 3]
+        c = self.memory[self.pos + 3]
         if c >= 32768:
             c = self.register[c % 32768]
         
@@ -243,11 +244,11 @@ class VM:
         self.pos += 4
             
     def op_12(self) -> None:
-        a = self.input[self.pos + 1] % 32768
-        b = self.input[self.pos + 2]
+        a = self.memory[self.pos + 1] % 32768
+        b = self.memory[self.pos + 2]
         if b >= 32768:
             b = self.register[b % 32768]
-        c = self.input[self.pos + 3]
+        c = self.memory[self.pos + 3]
         if c >= 32768:
             c = self.register[c % 32768]
         
@@ -256,11 +257,11 @@ class VM:
         self.pos += 4
         
     def op_13(self) -> None:
-        a = self.input[self.pos + 1] % 32768
-        b = self.input[self.pos + 2]
+        a = self.memory[self.pos + 1] % 32768
+        b = self.memory[self.pos + 2]
         if b >= 32768:
             b = self.register[b % 32768]
-        c = self.input[self.pos + 3]
+        c = self.memory[self.pos + 3]
         if c >= 32768:
             c = self.register[c % 32768]
         
@@ -273,8 +274,8 @@ class VM:
             '0': '1',
             '1': '0'
         }
-        a = self.input[self.pos + 1] % 32768
-        b = self.input[self.pos + 2]
+        a = self.memory[self.pos + 1] % 32768
+        b = self.memory[self.pos + 2]
         if b >= 32768:
             b = self.register[b % 32768]
         
@@ -285,9 +286,22 @@ class VM:
         
         self.pos += 3
         
+    def op_15(self) -> None:
+        b = self.memory[self.pos + 2]
+        if b >= 32768:
+            b = self.register[b % 32768]
+        a = self.memory[self.pos + 1]
+        if a >= 32768:
+            self.register[a % 32768] = self.memory[b]
+        else:
+            self.memory[a] = self.memory[b]
+            
+        self.pos += 3
+        
+        
     
     def op_17(self) -> None:
-        a = self.input[self.pos + 1]
+        a = self.memory[self.pos + 1]
         if a >= 32768:
             a = self.register[a % 32768]
         
@@ -303,12 +317,12 @@ class VM:
     
     def op_19(self) -> None:
         self.pos += 1
-        num = self.input[self.pos]
+        num = self.memory[self.pos]
         if num >= 32768:
             num %= 32768
             char = chr(num)
         else:
-            char = chr(self.input[self.pos])
+            char = chr(self.memory[self.pos])
         print(char, end='')
         self.pos += 1
         
