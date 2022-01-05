@@ -54,7 +54,8 @@ class VM:
                 self.op_3()
             elif num == 4:
                 self.op_4()
-                
+            elif num == 5:
+                self.op_5()
             elif num == 6:
                 self.op_6()
             elif num == 7:
@@ -108,6 +109,22 @@ class VM:
             c = self.register[c % 32768]
         
         if b == c:
+            self.register[a] = 1
+        else:
+            self.register[a] = 0
+        
+        self.pos += 4
+        
+    def op_5(self) -> None:
+        a = self.input[self.pos + 1] % 32768
+        b = self.input[self.pos + 2]
+        if b >= 32768:
+            b = self.register[b % 32768]
+        c = self.input[self.pos + 3]
+        if c >= 32768:
+            c = self.register[c % 32768]
+        
+        if b > c:
             self.register[a] = 1
         else:
             self.register[a] = 0
