@@ -69,6 +69,8 @@ class VM:
                 self.op_12()
             elif num == 13:
                 self.op_13()
+            elif num == 14:
+                self.op_14()
                 
             elif num == 19:
                 self.op_19()
@@ -234,6 +236,23 @@ class VM:
         self.register[a] = b | c
         
         self.pos += 4
+        
+    def op_14(self) -> None:
+        inverse = {
+            '0': '1',
+            '1': '0'
+        }
+        a = self.input[self.pos + 1] % 32768
+        b = self.input[self.pos + 2]
+        if b >= 32768:
+            b = self.register[b % 32768]
+        
+        b = bin(b)[2:].zfill(15)
+        b = ''.join(inverse[x] for x in b)
+        b = int(b, 2)
+        self.register[a] = b
+        
+        self.pos += 3
         
         
     
