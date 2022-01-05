@@ -50,7 +50,8 @@ class VM:
                 self.op_1()
             elif num == 2:
                 self.op_2()
-                
+            elif num == 3:
+                self.op_3()
             elif num == 4:
                 self.op_4()
                 
@@ -92,6 +93,10 @@ class VM:
         self.stack.append(a)
         self.pos += 2
         
+    def op_3(self) -> None:
+        a = self.input[self.pos + 1] % 32768
+        self.register[a] = self.stack.pop()
+        self.pos += 2
         
     def op_4(self) -> None:
         a = self.input[self.pos + 1] % 32768
