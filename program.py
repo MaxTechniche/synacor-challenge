@@ -75,7 +75,8 @@ class VM:
                 self.op_14()
             elif num == 15:
                 self.op_15()
-                
+            elif num == 16:
+                self.op_16()
             elif num == 17:
                 self.op_17()
                 
@@ -298,6 +299,17 @@ class VM:
             
         self.pos += 3
         
+    def op_16(self) -> None:
+        b = self.memory[self.pos + 2]
+        if b >= 32768:
+            b = self.register[b % 32768]
+        a = self.memory[self.pos + 1]
+        if a >= 32768:
+            self.memory[self.register[a % 32768]] = b
+        else:
+            self.memory[self.memory[a]] = b
+            
+        self.pos += 3
         
     
     def op_17(self) -> None:
