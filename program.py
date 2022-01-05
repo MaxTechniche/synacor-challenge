@@ -65,6 +65,9 @@ class VM:
             elif num == 9:
                 self.op_9()
                 
+            elif num == 12:
+                self.op_12()
+                
             elif num == 19:
                 self.op_19()
                 
@@ -203,6 +206,21 @@ class VM:
         self.register[a] = (b + c) % 32768
         
         self.pos += 4
+        
+        
+    def op_12(self) -> None:
+        a = self.input[self.pos + 1] % 32768
+        b = self.input[self.pos + 2]
+        if b >= 32768:
+            b = self.register[b % 32768]
+        c = self.input[self.pos + 3]
+        if c >= 32768:
+            c = self.register[c % 32768]
+        
+        self.register[a] = b & c
+        
+        self.pos += 4
+        
         
     
     def op_19(self) -> None:
