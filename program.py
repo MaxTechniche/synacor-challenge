@@ -48,6 +48,8 @@ class VM:
                 self.op_0()
             elif num == 1:
                 self.op_1()
+            elif num == 2:
+                self.op_2()
                 
             elif num == 4:
                 self.op_4()
@@ -81,6 +83,14 @@ class VM:
             b = self.register[b % 32768]
         self.register[a] = b
         self.pos += 3
+        
+    def op_2(self) -> None:
+        a = self.input[self.pos + 1]
+        if a >= 32768:
+            a = self.register[a % 32768]
+        
+        self.stack.append(a)
+        self.pos += 2
         
         
     def op_4(self) -> None:
