@@ -67,6 +67,8 @@ class VM:
                 
             elif num == 12:
                 self.op_12()
+            elif num == 13:
+                self.op_13()
                 
             elif num == 19:
                 self.op_19()
@@ -80,7 +82,7 @@ class VM:
 
     def op_0(self) -> None:
         sys.exit(0)
-        
+
     def op_1(self) -> None:
         a = self.input[self.pos + 1] % 32768
         b = self.input[self.pos + 2]
@@ -88,7 +90,7 @@ class VM:
             b = self.register[b % 32768]
         self.register[a] = b
         self.pos += 3
-        
+
     def op_2(self) -> None:
         a = self.input[self.pos + 1]
         if a >= 32768:
@@ -96,12 +98,12 @@ class VM:
         
         self.stack.append(a)
         self.pos += 2
-        
+
     def op_3(self) -> None:
         a = self.input[self.pos + 1] % 32768
         self.register[a] = self.stack.pop()
         self.pos += 2
-        
+
     def op_4(self) -> None:
         a = self.input[self.pos + 1] % 32768
         b = self.input[self.pos + 2]
@@ -117,7 +119,7 @@ class VM:
             self.register[a] = 0
         
         self.pos += 4
-        
+
     def op_5(self) -> None:
         a = self.input[self.pos + 1] % 32768
         b = self.input[self.pos + 2]
@@ -133,8 +135,7 @@ class VM:
             self.register[a] = 0
         
         self.pos += 4
-        
-        
+   
     def op_6(self) -> None:
         a = self.input[self.pos + 1] % 32768
         if a >= 32768:
@@ -218,6 +219,19 @@ class VM:
             c = self.register[c % 32768]
         
         self.register[a] = b & c
+        
+        self.pos += 4
+        
+    def op_13(self) -> None:
+        a = self.input[self.pos + 1] % 32768
+        b = self.input[self.pos + 2]
+        if b >= 32768:
+            b = self.register[b % 32768]
+        c = self.input[self.pos + 3]
+        if c >= 32768:
+            c = self.register[c % 32768]
+        
+        self.register[a] = b | c
         
         self.pos += 4
         
