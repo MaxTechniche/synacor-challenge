@@ -312,10 +312,10 @@ class VM:
     
     def op_19(self) -> None:
         self.pos += 1
-        num = self.memory[self.pos]
-        if num >= 32768:
-            num %= 32768
-            char = chr(num)
+        a = self.memory[self.pos]
+        if a >= 32768:
+            a = self.register[a % 32768]
+            char = chr(a)
         else:
             char = chr(self.memory[self.pos])
         print(char, end='')
@@ -328,7 +328,6 @@ class VM:
         self.memory[a] = ord(input())
         self.pos += 2
             
-        
     def op_21(self) -> None:
         self.pos += 1
     
