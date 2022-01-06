@@ -1,7 +1,8 @@
+from collections import deque
 import time
 import sys
-from collections import deque
 
+MAX_VALUE = 32768
 
 def main():
     vm = VM()
@@ -14,31 +15,14 @@ class VM:
         self.register = [0] * 8
         self.stack = []
         self.input_buffer = deque([])
-        self.pos = 0
-        self.op = {
-            '0': self.op_0,
-            '1': self.op_1,
-            '2': self.op_2,
-            '3': self.op_3,
-            '4': self.op_4,
-            '5': self.op_5,
-            '6': self.op_6,
-            '7': self.op_7,
-            '8': self.op_8,
-            '9': self.op_9,
-            '10': self.op_10,
-            '11': self.op_11,
-            '12': self.op_12,
-            '13': self.op_13,
-            '14': self.op_14,
-            '15': self.op_15,
-            '16': self.op_16,
-            '17': self.op_17,
-            '18': self.op_18,
-            '19': self.op_19, 
-            '20': self.op_20,
-            '21': self.op_21
-        }
+        self.address = 0
+        
+    def get_register(self):
+        s = '-'*63 + '\n'
+        s += '\t'.join(['reg ' + str(x) + ' |' for x in range(8)]) + '\n'
+        s += ' \t'.join([str(x) for x in self.register]) + '\n'
+        s += '-'*63
+        return s
         
     def read(self, file_path: str=None) -> bool:
         if not file_path:
@@ -68,276 +52,184 @@ class VM:
 
     def run(self) -> None:
         while True:
-            num = self.memory[self.pos]
+            num = self.get_val(0, False)
             
-            if str(num) not in self.op:
+            try:
+                getattr(self, 'opcode_' + str(num))()
+            except AttributeError:
                 print(num)
                 break
-
-            self.op[str(num)]()
             
+    def set_val(self, value, address_value, reg=True, force_reg=False):
+        if reg:
+            if address_value >= MAX_VALUE:
+                self.register[address_value % MAX_VALUE] = value
+                return
+            if force_reg:
+                self.register[address_value] = value
+                return
+        self.memory[address_value] = value
+        
+           
+    def get_val(self, address, reg=True):
+        n = self.memory[self.address + address]
+        if reg:
+            if n >= MAX_VALUE:
+                n = self.register[n % MAX_VALUE]
             
-    def op_0(self) -> None:
+        return n
+            
+    def opcode_0(self) -> None:
         sys.exit(0)
 
-    def op_1(self) -> None:
-        a = self.memory[self.pos + 1] % 32768
-        b = self.memory[self.pos + 2]
-        if b >= 32768:
-            b = self.register[b % 32768]
+    def opcode_1(self) -> None:
+        a = self.memory[self.address + 1] % MAX_VALUE
+        b = self.get_val(2)
+        self.set_val(b, a, force_reg=True)
         self.register[a] = b
-        self.pos += 3
+        self.address += 3
 
-    def op_2(self) -> None:
-        
-        a = self.memory[self.pos + 1]
-        if a >= 32768:
-            a = self.register[a % 32768]
-        
+    def opcode_2(self) -> None:
+        a = self.get_val(1)
         self.stack.append(a)
-        self.pos += 2
+        self.address += 2
 
-    def op_3(self) -> None:
-        a = self.memory[self.pos + 1]
-        if a >= 32768:
-            self.register[a % 32768] = self.stack.pop()
-        else:
-            self.memory[a] = self.stack.pop()
-        self.pos += 2
+    def opcode_3(self) -> None:
+        a = self.get_val(1, False)
+        self.set_val(self.stack.pop(), a)
+        self.address += 2
 
-    def op_4(self) -> None:
-        a = self.memory[self.pos + 1] % 32768
-        b = self.memory[self.pos + 2]
-        if b >= 32768:
-            b = self.register[b % 32768]
-        c = self.memory[self.pos + 3]
-        if c >= 32768:
-            c = self.register[c % 32768]
-        
-        if b == c:
-            self.register[a] = 1
-        else:
-            self.register[a] = 0
-        
-        self.pos += 4
+    def opcode_4(self) -> None:
+        a = self.get_val(1, False)
+        b = self.get_val(2)
+        c = self.get_val(3)
+        self.set_val(1 * (b == c), a)
+        self.address += 4
 
-    def op_5(self) -> None:
-        a = self.memory[self.pos + 1] % 32768
-        b = self.memory[self.pos + 2]
-        if b >= 32768:
-            b = self.register[b % 32768]
-        c = self.memory[self.pos + 3]
-        if c >= 32768:
-            c = self.register[c % 32768]
-        
-        if b > c:
-            self.register[a] = 1
-        else:
-            self.register[a] = 0
-        
-        self.pos += 4
+    def opcode_5(self) -> None:
+        a = self.get_val(1, False)
+        b = self.get_val(2)
+        c = self.get_val(3)
+        self.set_val(1 * (b > c), a)
+        self.address += 4
    
-    def op_6(self) -> None:
-        a = self.memory[self.pos + 1]
-        if a >= 32768:
-            a = self.register[a % 32768]
-        self.pos = a
+    def opcode_6(self) -> None:
+        self.address = self.get_val(1)
         
-    def op_7(self) -> None:
-        # self.pos += 1
-        # num = self.memory[self.pos]
-        # if num >= 32768:
-        #     num %= 32768
-        #     if self.register[num] != 0:
-        #         self.pos = self.memory[self.pos+1]
-        #         return
-        # else:
-        #     if self.memory[self.pos] != 0:
-        #         self.pos = self.memory[self.pos+1]
-        #         return
-        # self.pos += 2
-        
-        a = self.memory[self.pos + 1]
-        if a >= 32768:
-            a = self.register[a % 32768]
-        b = self.memory[self.pos + 2]
-        if b >= 32768:
-            b = self.register[b % 32768]
+    def opcode_7(self) -> None:
+        a = self.get_val(1)
+        b = self.get_val(2)
         
         if a != 0:
-            self.pos = b
+            self.address = b
             return
-        self.pos += 3
+        self.address += 3
         
-    def op_8(self) -> None:
-        # self.pos += 1
-        # num = self.memory[self.pos]
-        # if num >= 32768:
-        #     num %= 32768
-        #     if self.register[num] == 0:
-        #         self.pos = self.memory[self.pos+1]
-        #         return
-        # else:
-        #     if self.memory[self.pos] == 0:
-        #         self.pos = self.memory[self.pos+1]
-        #         return
-            
-        # self.pos += 2
-        
-        a = self.memory[self.pos + 1]
-        if a >= 32768:
-            a = self.register[a % 32768]
-        b = self.memory[self.pos + 2]
-        if b >= 32768:
-            b = self.register[b % 32768]
+    def opcode_8(self) -> None:
+        a = self.get_val(1)
+        b = self.get_val(2)
         
         if a == 0:
-            self.pos = b
+            self.address = b
             return
-        self.pos += 3
+        self.address += 3
         
-    def op_9(self) -> None:
-        a = self.memory[self.pos + 1] % 32768
-        b = self.memory[self.pos + 2]
-        if b >= 32768:
-            b = self.register[b % 32768]
-        c = self.memory[self.pos + 3]
-        if c >= 32768:
-            c = self.register[c % 32768]
+    def opcode_9(self) -> None:
+        a = self.get_val(1, False)
+        b = self.get_val(2)
+        c = self.get_val(3)
+        self.set_val((b + c) % MAX_VALUE, a)
         
-        self.register[a] = (b + c) % 32768
+        self.address += 4
         
-        self.pos += 4
+    def opcode_10(self) -> None:
+        a = self.get_val(1, False)
+        b = self.get_val(2)
+        c = self.get_val(3)
+        self.set_val((b * c) % MAX_VALUE, a)
         
-    def op_10(self) -> None:
-        a = self.memory[self.pos + 1] % 32768
-        b = self.memory[self.pos + 2]
-        if b >= 32768:
-            b = self.register[b % 32768]
-        c = self.memory[self.pos + 3]
-        if c >= 32768:
-            c = self.register[c % 32768]
+        self.address += 4
         
-        self.register[a] = (b * c) % 32768
+    def opcode_11(self) -> None:
+        a = self.get_val(1, False)
+        b = self.get_val(2)
+        c = self.get_val(3)
+        self.set_val(b % c, a)
         
-        self.pos += 4
-        
-    def op_11(self) -> None:
-        a = self.memory[self.pos + 1] % 32768
-        b = self.memory[self.pos + 2]
-        if b >= 32768:
-            b = self.register[b % 32768]
-        c = self.memory[self.pos + 3]
-        if c >= 32768:
-            c = self.register[c % 32768]
-        
-        self.register[a] = b % c
-        
-        self.pos += 4
+        self.address += 4
             
-    def op_12(self) -> None:
-        a = self.memory[self.pos + 1] % 32768
-        b = self.memory[self.pos + 2]
-        if b >= 32768:
-            b = self.register[b % 32768]
-        c = self.memory[self.pos + 3]
-        if c >= 32768:
-            c = self.register[c % 32768]
+    def opcode_12(self) -> None:
+        a = self.get_val(1, False)
+        b = self.get_val(2)
+        c = self.get_val(3)
+        self.set_val(b & c, a)
         
-        self.register[a] = b & c
+        self.address += 4
         
-        self.pos += 4
+    def opcode_13(self) -> None:
+        a = self.get_val(1, False)
+        b = self.get_val(2)
+        c = self.get_val(3)
+        self.set_val(b | c, a)
         
-    def op_13(self) -> None:
-        a = self.memory[self.pos + 1] % 32768
-        b = self.memory[self.pos + 2]
-        if b >= 32768:
-            b = self.register[b % 32768]
-        c = self.memory[self.pos + 3]
-        if c >= 32768:
-            c = self.register[c % 32768]
+        self.address += 4
         
-        self.register[a] = b | c
-        
-        self.pos += 4
-        
-    def op_14(self) -> None:
+    def opcode_14(self) -> None:
         inverse = {
             '0': '1',
             '1': '0'
         }
-        a = self.memory[self.pos + 1] % 32768
-        b = self.memory[self.pos + 2]
-        if b >= 32768:
-            b = self.register[b % 32768]
+        a = self.get_val(1, False)
+        b = self.get_val(2)
         
         b = bin(b)[2:].zfill(15)
         b = ''.join(inverse[x] for x in b)
         b = int(b, 2)
-        self.register[a] = b
+        self.set_val(b, a)
         
-        self.pos += 3
+        self.address += 3
         
-    def op_15(self) -> None:
-        b = self.memory[self.pos + 2]
-        if b >= 32768:
-            b = self.register[b % 32768]
-        a = self.memory[self.pos + 1]
-        if a >= 32768:
-            self.register[a % 32768] = self.memory[b]
-        else:
-            self.memory[a] = self.memory[b]
+    def opcode_15(self) -> None:
+        a = self.get_val(1, False)
+        b = self.memory[self.get_val(2)]
+        self.set_val(b, a)
             
-        self.pos += 3
+        self.address += 3
         
-    def op_16(self) -> None:
-        b = self.memory[self.pos + 2]
-        if b >= 32768:
-            b = self.register[b % 32768]
+    def opcode_16(self) -> None:
+        b = self.get_val(2)
+        a = self.get_val(1)
+        self.set_val(b, a, False)
             
-        a = self.memory[self.pos + 1]
-        if a >= 32768:
-            a = self.register[a % 32768]
-        self.memory[a] = b
-            
-        self.pos += 3
+        self.address += 3
          
-    def op_17(self) -> None:
-        self.stack.append(self.pos+2)
+    def opcode_17(self) -> None:
+        self.stack.append(self.address+2)
+        self.address = self.get_val(1)
         
-        a = self.memory[self.pos + 1]
-        if a >= 32768:
-            a = self.register[a % 32768]
-        self.pos = a
-        
-    def op_18(self) -> None:
-        val = self.stack.pop()
-        self.pos = val
+    def opcode_18(self) -> None:
+        self.address = self.stack.pop()
     
-    def op_19(self) -> None:
-        a = self.memory[self.pos + 1]
-        if a >= 32768:
-            a = self.register[a % 32768]
-        char = chr(a)
-        print(char, end='')
-        self.pos += 2
+    def opcode_19(self) -> None:
+        a = self.get_val(1)
+        print(chr(a), end='')
+        self.address += 2
         
-    def op_20(self) -> None:
+    def opcode_20(self) -> None:
         if self.input_buffer:
             n = self.input_buffer.popleft()
-            a = self.memory[self.pos + 1]
-            if a >= 32768:
-                self.register[a % 32768] = n
-            else:
-                self.memory[a] = n
+            if n != 10 or n != 13:
+                a = self.get_val(1, False)
+                self.set_val(n, a)
+            
+            self.address += 2
         else:
-            i = input()
+            i = list(input() + '\n')
             for ch in i:
                 self.input_buffer.append(ord(ch))
-        self.pos += 2
             
-    def op_21(self) -> None:
-        self.pos += 1
+    def opcode_21(self) -> None:
+        self.address += 1
     
     
 if __name__ == '__main__':
