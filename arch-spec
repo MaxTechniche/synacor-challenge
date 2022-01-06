@@ -60,13 +60,7 @@ mod: 11 a b c
 and: 12 a b c
   stores into <a> the bitwise and of <b> and <c>
 or: 13 a b c
-  stores into <a> the bitwise or of <b> and <c>
-not: 14 a b
-  stores 15-bit bitwise inverse of <b> in <a>
-rmem: 15 a b
-  read memory at address <b> and write it to <a>
-wmem: 16 a b
-  write the value from <b> into memory at address <a>
+  stores into <a> the bitwise or of <b> and <c>4
 call: 17 a
   write the address of the next instruction to the stack and jump to <a>
 ret: 18

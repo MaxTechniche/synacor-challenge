@@ -1,5 +1,7 @@
 import time
 import sys
+from collections import deque
+
 
 def main():
     vm = VM()
@@ -11,6 +13,7 @@ class VM:
         self.memory = []
         self.register = [0] * 8
         self.stack = []
+        self.input_buffer = deque([])
         self.pos = 0
         self.op = {
             '0': self.op_0,
@@ -86,6 +89,7 @@ class VM:
         self.pos += 3
 
     def op_2(self) -> None:
+        
         a = self.memory[self.pos + 1]
         if a >= 32768:
             a = self.register[a % 32768]
@@ -311,21 +315,25 @@ class VM:
         self.pos = val
     
     def op_19(self) -> None:
-        self.pos += 1
-        a = self.memory[self.pos]
-        if a >= 32768:
-            a = self.register[a % 32768]
-            char = chr(a)
-        else:
-            char = chr(self.memory[self.pos])
-        print(char, end='')
-        self.pos += 1
-        
-    def op_20(self) -> None:
         a = self.memory[self.pos + 1]
         if a >= 32768:
             a = self.register[a % 32768]
-        self.memory[a] = ord(input())
+        char = chr(a)
+        print(char, end='')
+        self.pos += 2
+        
+    def op_20(self) -> None:
+        if self.input_buffer:
+            n = self.input_buffer.popleft()
+            a = self.memory[self.pos + 1]
+            if a >= 32768:
+                self.register[a % 32768] = n
+            else:
+                self.memory[a] = n
+        else:
+            i = input()
+            for ch in i:
+                self.input_buffer.append(ord(ch))
         self.pos += 2
             
     def op_21(self) -> None:
