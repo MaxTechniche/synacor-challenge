@@ -1,32 +1,81 @@
+#!/usr/bin/env python3
+
 from collections import deque
 import time
 import sys
+import json
+
 
 MAX_VALUE = 32768
+
 
 def main():
     vm = VM()
     vm.read()
     vm.run()
 
+class InputBuffer(list):
+    def __init__(self, *args) -> None:
+        super().__init__(*args)
+        self.address = 0
+
+    def __call__(self, *args: any, **kwds: any) -> any:
+        return self.address < len(self)
+
+    def add(self, val: str | int | list):
+        if isinstance(val, list) or isinstance(val, str):
+            for element in val:
+                self.append(ord(element))
+        elif isinstance(val, int):
+            self.append(val)
+        else:
+            raise ValueError("Unable to add type " + type(val).__name__)
+
+        self.append(10)
+        return self
+
+    def next(self):
+        if self():
+            self.address += 1
+            return self[self.address - 1]
+        else:
+            raise IndexError
+
+    def to_dict(self):
+        d = {}
+        d["history"] = self[:]
+        d["address"] = self.address
+        return d
+
+class Room(dict):
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self['long_desc'] = ''
+        self['short_desc'] = ''
+        self['id'] = None
+        self['items'] = []
+        self['actions'] = []
+        
+        
 class VM:
-    def __init__(self) -> None:
+    def __init__(self, *args, **kwargs) -> None:
         self.memory = []
         self.register = [0] * 8
         self.stack = []
-        self.input_buffer = deque([])
+        self.input_buffer = InputBuffer()
         self.address = 0
-        
+        self.current_room = Room()
+
     def get_register(self):
-        s = '-'*63 + '\n'
-        s += '\t'.join(['reg ' + str(x) + ' |' for x in range(8)]) + '\n'
-        s += ' \t'.join([str(x) for x in self.register]) + '\n'
-        s += '-'*63
+        s = "-" * 63 + "\n"
+        s += "\t".join(["reg " + str(x) + " |" for x in range(8)]) + "\n"
+        s += " \t".join([str(x) for x in self.register]) + "\n"
+        s += "-" * 63
         return s
-        
-    def read(self, file_path: str=None) -> bool:
+
+    def read(self, file_path: str = None) -> bool:
         if not file_path:
-            file_path = 'challenge.bin'
+            file_path = "challenge.bin"
 
         # Expand 2 bytes to 1 little-endian pair
         def expand_bytes(low, high):
@@ -37,7 +86,7 @@ class VM:
             return num
 
         # Parse File
-        with open(file_path, 'rb') as b:
+        with open(file_path, "rb") as b:
             while True:
                 low = None
                 high = None
@@ -53,13 +102,13 @@ class VM:
     def run(self) -> None:
         while True:
             num = self.get_val(0, False)
-            
+
             try:
-                getattr(self, 'opcode_' + str(num))()
+                getattr(self, "opcode_" + str(num))()
             except AttributeError:
                 print(num)
                 break
-            
+
     def set_val(self, value, address_value, reg=True, force_reg=False):
         if reg:
             if address_value >= MAX_VALUE:
@@ -69,16 +118,15 @@ class VM:
                 self.register[address_value] = value
                 return
         self.memory[address_value] = value
-        
-           
+
     def get_val(self, address, reg=True):
         n = self.memory[self.address + address]
         if reg:
             if n >= MAX_VALUE:
                 n = self.register[n % MAX_VALUE]
-            
+
         return n
-            
+
     def opcode_0(self) -> None:
         sys.exit(0)
 
@@ -112,125 +160,152 @@ class VM:
         c = self.get_val(3)
         self.set_val(1 * (b > c), a)
         self.address += 4
-   
+
     def opcode_6(self) -> None:
         self.address = self.get_val(1)
-        
+
     def opcode_7(self) -> None:
         a = self.get_val(1)
         b = self.get_val(2)
-        
+
         if a != 0:
             self.address = b
             return
         self.address += 3
-        
+
     def opcode_8(self) -> None:
         a = self.get_val(1)
         b = self.get_val(2)
-        
+
         if a == 0:
             self.address = b
             return
         self.address += 3
-        
+
     def opcode_9(self) -> None:
         a = self.get_val(1, False)
         b = self.get_val(2)
         c = self.get_val(3)
         self.set_val((b + c) % MAX_VALUE, a)
-        
+
         self.address += 4
-        
+
     def opcode_10(self) -> None:
         a = self.get_val(1, False)
         b = self.get_val(2)
         c = self.get_val(3)
         self.set_val((b * c) % MAX_VALUE, a)
-        
+
         self.address += 4
-        
+
     def opcode_11(self) -> None:
         a = self.get_val(1, False)
         b = self.get_val(2)
         c = self.get_val(3)
         self.set_val(b % c, a)
-        
+
         self.address += 4
-            
+
     def opcode_12(self) -> None:
         a = self.get_val(1, False)
         b = self.get_val(2)
         c = self.get_val(3)
         self.set_val(b & c, a)
-        
+
         self.address += 4
-        
+
     def opcode_13(self) -> None:
         a = self.get_val(1, False)
         b = self.get_val(2)
         c = self.get_val(3)
         self.set_val(b | c, a)
-        
+
         self.address += 4
-        
+
     def opcode_14(self) -> None:
-        inverse = {
-            '0': '1',
-            '1': '0'
-        }
+        inverse = {"0": "1", "1": "0"}
         a = self.get_val(1, False)
         b = self.get_val(2)
-        
+
         b = bin(b)[2:].zfill(15)
-        b = ''.join(inverse[x] for x in b)
+        b = "".join(inverse[x] for x in b)
         b = int(b, 2)
         self.set_val(b, a)
-        
+
         self.address += 3
-        
+
     def opcode_15(self) -> None:
         a = self.get_val(1, False)
         b = self.memory[self.get_val(2)]
         self.set_val(b, a)
-            
+
         self.address += 3
-        
+
     def opcode_16(self) -> None:
         b = self.get_val(2)
         a = self.get_val(1)
         self.set_val(b, a, False)
-            
+
         self.address += 3
-         
+
     def opcode_17(self) -> None:
-        self.stack.append(self.address+2)
+        self.stack.append(self.address + 2)
         self.address = self.get_val(1)
-        
+
     def opcode_18(self) -> None:
         self.address = self.stack.pop()
-    
+
     def opcode_19(self) -> None:
         a = self.get_val(1)
-        print(chr(a), end='')
+        self.room_info += chr(a)
+        print(chr(a), end="")
         self.address += 2
-        
+
     def opcode_20(self) -> None:
-        if self.input_buffer:
-            n = self.input_buffer.popleft()
+        if self.room['desc']:
+            if self.room_info in self.rooms:
+                
+        if self.input_buffer():
+            n = self.input_buffer.next()
             if n != 10 or n != 13:
                 a = self.get_val(1, False)
                 self.set_val(n, a)
-            
+
             self.address += 2
         else:
-            i = list(input() + '\n')
-            for ch in i:
-                self.input_buffer.append(ord(ch))
-            
+            self.input_buffer.add(input())
+
     def opcode_21(self) -> None:
         self.address += 1
-    
-    
-if __name__ == '__main__':
+
+
+def save(vm: VM, file_path: str = None) -> None:
+    state = {}
+    state["memory"] = vm.memory
+    state["register"] = vm.register
+    state["input_buffer"] = vm.input_buffer.to_dict()
+    state["stack"] = vm.stack
+    state["address"] = vm.address
+
+    if not file_path:
+        file_path = "program-save"
+    json.dump(state, open(file_path, "w"))
+
+
+def load(file_path: str = None) -> VM:
+    if not file_path:
+        file_path = "program-save"
+    state = json.load(open(file_path))
+    vm = VM()
+    vm.memory = state["memory"]
+    vm.address = state["address"]
+    vm.stack = state["stack"]
+    vm.register = state["register"]
+    vm.input_buffer = InputBuffer(state["input_buffer"]["history"])
+    vm.input_buffer.address = state["input_buffer"]["address"]
+
+    return vm
+
+
+if __name__ == "__main__":
     main()

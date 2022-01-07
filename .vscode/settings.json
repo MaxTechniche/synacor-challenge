@@ -1,3 +1,4 @@
 {
-  "cSpell.words": ["deque"]
+  "cSpell.words": ["deque"],
+  "python.formatting.provider": "black"
 }
