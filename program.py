@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 
-from collections import deque
-import time
 import sys
 import json
 
 
 MAX_VALUE = 32768
+ROOMS = {}
 
 
 def main():
     vm = VM()
     vm.read()
     vm.run()
+
 
 class InputBuffer(list):
     def __init__(self, *args) -> None:
@@ -44,19 +44,36 @@ class InputBuffer(list):
     def to_dict(self):
         d = {}
         d["history"] = self[:]
-        d["address"] = self.address
+        d["address"] = 0
         return d
+
 
 class Room(dict):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self['long_desc'] = ''
-        self['short_desc'] = ''
-        self['id'] = None
-        self['items'] = []
-        self['actions'] = []
-        
-        
+        self["long_desc"] = ""
+        self["short_desc"] = ""
+        self["id"] = None
+        self["items"] = []
+        self["actions"] = []
+
+    def remove_exit(self, e: str) -> None:
+        self["actions"].remove(e)
+
+    def set_id(self) -> None:
+        if self["id"]:
+            return
+        try:
+            i = ""
+            for ch in self["long_desc"]:
+                i += bin(ord(ch))[2:].zfill(8)
+            i = i[::-1]
+            i = int(i, 2)
+            self["id"] = i % 2147483647
+        except TypeError:
+            return
+
+
 class VM:
     def __init__(self, *args, **kwargs) -> None:
         self.memory = []
@@ -91,11 +108,11 @@ class VM:
                 low = None
                 high = None
                 for i in b.read(2):
-                    if low == None:
+                    if low is None:
                         low = i
-                    elif high == None:
+                    elif high is None:
                         high = i
-                if low == None and high == None:
+                if low is None and high is None:
                     break
                 self.memory.append(expand_bytes(low, high))
 
@@ -107,7 +124,7 @@ class VM:
                 getattr(self, "opcode_" + str(num))()
             except AttributeError:
                 print(num)
-                break
+                raise
 
     def set_val(self, value, address_value, reg=True, force_reg=False):
         if reg:
@@ -128,7 +145,7 @@ class VM:
         return n
 
     def opcode_0(self) -> None:
-        sys.exit(0)
+        sys.exit()
 
     def opcode_1(self) -> None:
         a = self.memory[self.address + 1] % MAX_VALUE
@@ -257,14 +274,19 @@ class VM:
 
     def opcode_19(self) -> None:
         a = self.get_val(1)
-        self.room_info += chr(a)
-        print(chr(a), end="")
+        if not self.current_room["id"]:
+            self.current_room["long_desc"] += chr(a)
+        if not self.input_buffer():
+            print(chr(a), end="")
+
         self.address += 2
 
     def opcode_20(self) -> None:
-        if self.room['desc']:
-            if self.room_info in self.rooms:
-                
+        if self.current_room["long_desc"]:
+            self.current_room.set_id()
+            if self.current_room["id"] not in ROOMS:
+                ROOMS[self.current_room["id"]] = self.current_room
+
         if self.input_buffer():
             n = self.input_buffer.next()
             if n != 10 or n != 13:
@@ -273,7 +295,40 @@ class VM:
 
             self.address += 2
         else:
-            self.input_buffer.add(input())
+            i = input().split()
+            if i[0] == "save":
+                if len(i) > 1:
+                    f_name = i[1]
+                else:
+                    f_name = None
+                save(self, f_name)
+                return
+            elif i[0] == "load":
+                if len(i) > 1:
+                    f_name = i[1]
+                else:
+                    f_name = None
+                try:
+                    self = load(f_name)
+                    self.run()
+                    return
+                except FileNotFoundError:
+                    print("file not found. Please try again.")
+                    return
+            elif i[0] == "exit":
+                if len(i) > 1:
+                    if i[1] == "save":
+                        if len(i) > 2:
+                            f_name = i[2]
+                        else:
+                            f_name = None
+                        save(self, f_name)
+
+                sys.exit()
+            i = " ".join(i)
+            self.input_buffer.add(i)
+
+        self.current_room = Room()
 
     def opcode_21(self) -> None:
         self.address += 1
@@ -286,6 +341,7 @@ def save(vm: VM, file_path: str = None) -> None:
     state["input_buffer"] = vm.input_buffer.to_dict()
     state["stack"] = vm.stack
     state["address"] = vm.address
+    state["ROOMS"] = ROOMS
 
     if not file_path:
         file_path = "program-save"
@@ -303,6 +359,8 @@ def load(file_path: str = None) -> VM:
     vm.register = state["register"]
     vm.input_buffer = InputBuffer(state["input_buffer"]["history"])
     vm.input_buffer.address = state["input_buffer"]["address"]
+    global ROOMS
+    ROOMS = state["ROOMS"]
 
     return vm
 
