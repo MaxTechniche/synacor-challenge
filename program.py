@@ -2,6 +2,7 @@
 
 import sys
 import json
+from pprint import pprint
 
 
 MAX_VALUE = 32768
@@ -40,6 +41,10 @@ class InputBuffer(list):
             return self[self.address - 1]
         else:
             raise IndexError
+
+    def clear(self):
+        self.address = 0
+        super().clear()
 
     def to_dict(self):
         d = {}
@@ -89,6 +94,38 @@ class VM:
         s += " \t".join([str(x) for x in self.register]) + "\n"
         s += "-" * 63
         return s
+
+    def get_address(self):
+        return self.address
+
+    def set_address(self, address):
+        self.address = address
+
+    def set_register(self, reg, val):
+        self.register[reg] = val
+
+    def get_memory_address(self, address):
+        return self.memory[address]
+
+    def set_memory_address(self, address, val):
+        self.memory[address] = val
+
+    def del_memory_address(self, address):
+        del self.memory[address]
+
+    def save_memory_state(self):
+        self.frozen_memory = self.memory[:]
+
+    def load_frozen_memory(self):
+        if hasattr(self, "frozen_memory"):
+            return self.frozen_memory
+
+    def memory_compare(self, other_memory):
+        memory_diff = {}
+        for i, v in enumerate(self.memory):
+            if v != other_memory[i]:
+                memory_diff[i] = f'{other_memory[i]} -> {v}'
+        return memory_diff
 
     def read(self, file_path: str = None) -> bool:
         if not file_path:
@@ -286,7 +323,6 @@ class VM:
             self.current_room.set_id()
             if self.current_room["id"] not in ROOMS:
                 ROOMS[self.current_room["id"]] = self.current_room
-
         if self.input_buffer():
             n = self.input_buffer.next()
             if n != 10 or n != 13:
@@ -296,6 +332,10 @@ class VM:
             self.address += 2
         else:
             i = input().split()
+            if not i:
+                print(f"{self.current_room['id']=}")
+                print(f"{self.register=}")
+                return
             if i[0] == "save":
                 if len(i) > 1:
                     f_name = i[1]
@@ -307,14 +347,80 @@ class VM:
                 if len(i) > 1:
                     f_name = i[1]
                 else:
-                    f_name = None
+                    f_name = "program-save"
                 try:
                     self = load(f_name)
                     self.run()
                     return
                 except FileNotFoundError:
                     print("file not found. Please try again.")
-                    return
+            elif i[0] in ("reg", "regestry"):
+                if len(i) > 1:
+                    if i[1] == "set":
+                        if len(i) > 3:
+                            try:
+                                self.set_register(int(i[2]), int(i[3]))
+                            except IndexError:
+                                print("regestry index out of range")
+                        else:
+                            print("please enter a value to set the register to.")
+                print(self.register)
+            elif i[0] in ("mem", "mem", "memory"):
+                if len(i) > 1:
+                    if i[1] == "set":
+                        if len(i) > 3:
+                            try:
+                                self.set_memory_address(int(i[2]), int(i[3]))
+                            except IndexError:
+                                print("address index out of range")
+                        else:
+                            print("please enter a value to set the address to.")
+                    elif i[1] == "setmany":
+                        if len(i) > 3:
+                            try:
+                                for x in range(int(i[2]), int(i[3]) + 1):
+                                    self.set_memory_address(x, int(i[4]))
+                            except IndexError:
+                                print("address index out of range")
+                        else:
+                            print("please enter a value to set the address to.")
+                    elif i[1] == "get":
+                        if len(i) > 2:
+                            try:
+                                print(self.get_memory_address(int(i[2])))
+                            except IndexError:
+                                print("address index out of range")
+                        else:
+                            print("please enter an address to get.")
+                    elif i[1] in ("del", "delete"):
+                        if len(i) > 2:
+                            try:
+                                self.del_memory_address(int(i[2]))
+                            except IndexError:
+                                print("address index out of range")
+                    elif i[1] in ("comp", "compare"):
+                        if len(i) < 3 or i[2] == "load":
+                            if frozen_memory := self.load_frozen_memory():
+                                diff = self.memory_compare(frozen_memory)
+                                pprint(diff)
+                            else:
+                                print("no frozen memory to compare to.")
+                        elif i[2] == "save":
+                            self.save_memory_state()
+                    elif i[1] == "save":
+                        self.save_memory_state()
+            elif i[0] in ("addr", "address"):
+                if len(i) > 1:
+                    if i[1] == "set":
+                        if len(i) > 3:
+                            try:
+                                self.set_address(int(i[2]))
+                            except IndexError:
+                                print("address index out of range")
+                        else:
+                            print("please include a value to set the address to.")
+                    elif i[1] == "get":
+                        print(self.address)
             elif i[0] == "exit":
                 if len(i) > 1:
                     if i[1] == "save":
@@ -325,8 +431,11 @@ class VM:
                         save(self, f_name)
 
                 sys.exit()
-            i = " ".join(i)
-            self.input_buffer.add(i)
+            else:
+                i = " ".join(i)
+                self.input_buffer.add(i)
+                return
+            self.input_buffer.clear()
 
         self.current_room = Room()
 
